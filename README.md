@@ -11,7 +11,7 @@ Mask from pfm:
 
 Parametrized, offset and blurred mask:
 
-![parametrizedmask](https://user-images.githubusercontent.com/5726108/37880171-c0691716-3084-11e8-8c6c-1d89aa354e70.jpg)
+![blurmask](https://user-images.githubusercontent.com/5726108/37880170-c04d62d2-3084-11e8-9517-85af78199549.jpg)
 
 Original photo:
 
