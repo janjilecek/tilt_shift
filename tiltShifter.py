@@ -11,10 +11,26 @@ def main():
 	with open("distance_crop.pfm", "rb") as f:
 		mask = produceGrayscaleFromPfm(f)
 	blurredBase = gauss(colorImage)
-	mask =  PIL.ImageOps.invert(mask)
-	colorImage.paste(blurredBase, mask=mask)
+	makeTiltShift(colorImage, blurredBase, mask, 90, 50, 1, 10, 240)
+
+
+def makeTiltShift(colorImage, blurredBase,  mask, angle=90, offsetInit=50, offsetStart=18, offsetEnd=10, focus=10):
+	#mask = PIL.ImageOps.invert(mask)
+	pixelMap = mask.load()
+	newImg = Image.new(mask.mode, mask.size)
+	pixelsNew = newImg.load()
+
+	for i in range(newImg.size[0]): # width
+		for j in range(newImg.size[1]): # height
+			if pixelMap[i,j] < offsetStart or pixelMap[i,j] > offsetEnd:
+				pixelsNew[i,j] = focus
+			else:
+				pixelsNew[i,j] = pixelMap[i,j] # leave the original ones
+
+	colorImage.paste(blurredBase, mask=newImg)
 	colorImage.save("1.jpg", "JPEG")
 	mask.save("2.jpg", "JPEG")
+	newImg.save("parametrizedMask.jpg", "JPEG")
 	colorImage.show()
 
 def gauss(image):
