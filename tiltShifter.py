@@ -11,7 +11,7 @@ def main():
 	with open("distance_crop.pfm", "rb") as f:
 		mask = produceGrayscaleFromPfm(f)
 	blurredBase = gauss(colorImage)
-	makeTiltShift(colorImage, blurredBase, mask, 90, 50, 1, 10, 240)
+	makeTiltShift(colorImage, blurredBase, mask, 90, 50, 1, 10, 255)
 
 
 def makeTiltShift(colorImage, blurredBase,  mask, angle=90, offsetInit=50, offsetStart=18, offsetEnd=10, focus=10):
@@ -27,18 +27,21 @@ def makeTiltShift(colorImage, blurredBase,  mask, angle=90, offsetInit=50, offse
 			else:
 				pixelsNew[i,j] = pixelMap[i,j] # leave the original ones
 
-	colorImage.paste(blurredBase, mask=newImg)
+	# apply blur to parametrized mask
+	blurMask = gaussianFilter(newImg, 10)
+	colorImage.paste(blurredBase, mask=blurMask)
 	colorImage.save("1.jpg", "JPEG")
 	mask.save("2.jpg", "JPEG")
+	blurMask.save("blurMask.jpg", "JPEG")
 	newImg.save("parametrizedMask.jpg", "JPEG")
 	colorImage.show()
 
-def gauss(image):
+def gauss(image): # blur for color
 	img = ndimage.gaussian_filter(image, sigma=(5,5,0), order=0)
 	plt.imshow(img, interpolation='nearest')
 	return(Image.fromarray(img))
 
-def gaussianFilter(image, blurAmount=5):
+def gaussianFilter(image, blurAmount=5): # blur for bw
 	blurred = nump.array(image, dtype=float)
 	blurred = ndimage.gaussian_filter(blurred, sigma=blurAmount)
 	blurred = Image.fromarray(nump.uint8(blurred))
