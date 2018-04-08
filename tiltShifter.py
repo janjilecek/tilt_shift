@@ -1,10 +1,11 @@
-import sys
 import struct
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as nump
 from PIL import Image
 from scipy import ndimage
-import numpy as nump
-import PIL.ImageOps
-import matplotlib.pyplot as plt
+
 
 def main():
 	colorImage = Image.open("photo_crop.jpg")
@@ -13,7 +14,9 @@ def main():
 	blurredBase = gauss(colorImage)
 	makeTiltShift(colorImage, blurredBase, mask, 90, 50, 1, 10, 255)
 
-
+# makeTiltShift parameters:
+# blur: blur radius in pixels
+# direction: angle of the tilt (hard mask, ignores distance data)
 def makeTiltShift(colorImage, blurredBase,  mask, angle=90, offsetInit=50, offsetStart=18, offsetEnd=10, focus=10):
 	#mask = PIL.ImageOps.invert(mask)
 	pixelMap = mask.load()
@@ -22,10 +25,7 @@ def makeTiltShift(colorImage, blurredBase,  mask, angle=90, offsetInit=50, offse
 
 	for i in range(newImg.size[0]): # width
 		for j in range(newImg.size[1]): # height
-			if pixelMap[i,j] < offsetStart or pixelMap[i,j] > offsetEnd:
-				pixelsNew[i,j] = focus
-			else:
-				pixelsNew[i,j] = pixelMap[i,j] # leave the original ones
+			pixelsNew[i,j] = pixelMap[i,j] # copy by pixels
 
 	# apply blur to parametrized mask
 	blurMask = gaussianFilter(newImg, 10)
@@ -69,6 +69,8 @@ def produceGrayscaleFromPfm(f):
 	maxVal = max(resultArr)
 	minVal = min(resultArr)
 
+	resultArr = simulateLens(resultArr, width, height, minVal, maxVal, int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
+
 	imageArr = []
 	for value in resultArr:
 		imageArr.append(translate(value, minVal, maxVal, 0, 255))
@@ -78,6 +80,38 @@ def produceGrayscaleFromPfm(f):
 	im.putdata(imageArr)
 	im = im.transpose(Image.FLIP_TOP_BOTTOM)
 	return(im)
+
+# simulateLens parameters:
+# arr: input array
+# width, height: w and h of the image data
+# minVal: minimal value in meters in image
+# maxVal: maximal value in meters in image
+# position: defines the point of focus (0-100) 66 would be 2/3 way in
+# focus: amount of area that ins in focus (0-100) 10 would mean 1/10 of image is sharp
+# fallout: area between focus and complete blur (0-100) lower value = tighter fade
+def simulateLens(arr, width, height, minVal, maxVal, position, focus, fallout):
+	print("minimal meters:" + str(minVal))
+	print("maximal meters:" + str(maxVal))
+
+	wholeRange = abs(maxVal)-abs(minVal)
+
+	focused = wholeRange/100*focus
+	positioned = wholeRange/100*position
+	fellout = wholeRange/100*fallout
+
+	for x in range(0, width):
+		for y in range(0, height):
+			data = arr[y*width+x]
+			if (data > positioned+focused/2+fellout or data < positioned-focused/2-fellout):
+				arr[y*width+x] = maxVal
+			# else no change of the data
+
+			if (data > positioned+focused/2 and data < positioned+focused/2+fellout): # data is in upper fallout zone
+				arr[y*width+x] = translate(data, positioned+focused/2, positioned+focused/2+fellout, positioned+focused/2, maxVal)
+			#elif (data < positioned-focused/2 and data > positioned-focused/2-fellout): # data is in lower fallout zone
+			#	arr[y*width+x] = translate(data, positioned-focused/2-fellout, positioned-focused/2, positioned-focused/2-fellout, maxVal) # TODO maybe swap
+
+	return(arr)
 
 def getFloat(data):
 	a = struct.unpack('f', data)
